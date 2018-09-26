@@ -13,12 +13,11 @@ block content
           tbody
             tr
               td
-                div.input-group.mb-3
-                  div.custom-file
-                    input#inputGroupFile02.custom-file-input(type="file")
-                    label.custom-file-label(for="inputGroupFile02", aria-describedby="inputGroupFileAddon02")
-                      | Choose file
-                    div.input-group-append
-                      span#inputGroupFileAddon02.input-group-text
-                        | Upload
+                form(method="post", action="/", enctype="multipart/form-data")
+                  div.form-group
+                    label.bmd-label-floating(for="firebase-csv")
+                      | File input
+                    input#firebase-csv.form-control-file(type="file", name="firebase-csv")
+                  button.btn.btn-primary(type="submit")
+                    | Submit
       div.col
