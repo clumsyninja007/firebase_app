@@ -1,0 +1,6 @@
+extends layout
+
+block content
+  for result in results
+    tr.odd(role='row')
+      td #{result.first_name}

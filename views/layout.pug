@@ -1,9 +1,21 @@
 doctype html
 html
   head
-    title= title
+    title= "Firebase App - " + title
     link(rel='stylesheet', href='/stylesheets/style.css')
     script(src="js/bootstrap-material-design.min.js")
     link(href="css/bootstrap-material-design.min.css", rel="stylesheet")
   body
-    block content
+    div.container
+      div.row
+        div.col
+        div.col-8
+          table.table
+            thead
+              tr
+                th(scope="col")
+                  a(href="/")
+                    h1= title
+            tbody
+              block content
+        div.col

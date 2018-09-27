@@ -1,20 +1,13 @@
 extends layout
 
 block content
-  div.container
-    div.row
-      div.col
-      div.col-8
-        table.table
-          thead
-            tr
-              th(scope="col")
-                h1 Choose an option
-          tbody
-            tr
-              td
-                a(href="/upload") Upload file
-            tr
-              td
-                a(href="/firebase_push") Push to Firebase
-      div.col
+  tr
+    td
+      a(href="/upload") Upload file
+  tr
+    td
+      a(href="/firebase_push") Push to Firebase
+  if success
+    tr
+      td
+        p File uploaded!
