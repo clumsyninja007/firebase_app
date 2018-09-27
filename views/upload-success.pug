@@ -1,6 +1,19 @@
 extends layout
 
 block content
-  for result in results
-    tr.odd(role='row')
-      td #{result.first_name}
+  table.table
+    thead
+      tr
+        td Record Number
+        td Full Name
+        td Drivers License Number
+        td Birthdate
+        td Record Created Date
+    tbody
+      for result in results
+        tr.odd(role='row')
+          td #{result[0]}
+          td #{result[4] + ' ' + result[5]}
+          td #{result[6]}
+          td #{result[7]}
+          td #{result[1]}
