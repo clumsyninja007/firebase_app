@@ -1,6 +1,9 @@
 var express = require('express');
 var router = express.Router();
 
+//var env = process.env.NODE_ENV || 'development';
+var config = require('../config');
+
 var Busboy = require('busboy');
 var util = require('util');
 
@@ -10,21 +13,36 @@ var mysql = require('mysql');
 
 var postResults = [];
 
-/*
-var sql = `INSERT INTO customers (batch_num, date_userID_created, snn, \
-  gender, first_name, last_name, lic_num, birthdate, \
-  points_strike, dl_class) VALUES (${data[0]}, '${data[1]}', '${data[2]}', \
-  '${data[3]}', '${data[4]}', '${data[5]}', '${data[6]}', \
-  '${data[7]}', '${data[8]}', '${data[9]}')`;
-con.query(sql, function(err, result) {
-if (err) throw err;
-console.log("1 record inserted");
+
+const admin = require('firebase-admin');
+//const functions = require('firebase-functions');
+
+var serviceAccount = require('../fir-app-9ddd7-firebase-adminsdk-1l3th-0895c82b20.json');
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
 });
-*/
+
+var db = admin.firestore();
+db.settings({ timestampsInSnapshots: true });
+
+// Firestore listener
+var query = db.collection('customers');
+
+var observer = query.onSnapshot(querySnapshot => {
+  console.log(`Received query snapshot of size ${querySnapshot.size}`);
+  querySnapshot.docs.forEach((doc) => {
+    console.log(doc.id);
+    console.log(doc.updateTime);
+  });
+}, err => {
+  console.log(`Encountered error: ${err}`);
+});
+// end firestore listener
 
 class Database {
-  constructor(config) {
-    this.connection = mysql.createConnection(config);
+  constructor() {
+    this.connection = mysql.createConnection(config.development.database);
   }
   query(sql,args) {
     return new Promise((resolve, reject) => {
@@ -57,13 +75,9 @@ router.get('/upload', function(req, res, next) {
 });
 
 // Insert data from uploaded file to MySQL
+// Then, display results
 router.post('/upload-success', function(req, res, next) {
-  var con = new Database({
-    host: "localhost",
-    user: "root",
-    password: "Le0dav!s",
-    database: "firebase_app_sql"
-  });
+  var con = new Database();
 
   var busboy = new Busboy({ headers: req.headers });
   CSVData = [];
@@ -113,16 +127,53 @@ router.post('/upload-success', function(req, res, next) {
   req.pipe(busboy);
 });
 
-// File upload page
-router.get('/upload', function(req, res, next) {
-  var con = new Database({
-    host: "localhost",
-    user: "root",
-    password: "Le0dav!s",
-    database: "firebase_app_sql"
+// Choose records to push to firestore
+router.get('/push', function(req, res, next) {
+  var con = new Database();
+
+  let options;
+
+  con.query(`SELECT * FROM customers WHERE pushed_to_firebase = 'N'`)
+    .then( rows => {
+      options = rows;
+      return con.close();
+    })
+    .then( () => {
+      console.log(options);
+      res.render('push', { title: 'Choose which files to Push to Firebase', options: options });
+    });
+});
+
+router.post('/push-firebase', function(req, res, next) {
+  var con = new Database();
+
+  console.log('POST: ' + util.inspect(req.body));
+
+  var postData = JSON.stringify(req.body, null, 2);
+  var postData = JSON.parse(postData);
+
+  Object.keys(postData).forEach(function(box) {
+    console.log(box + ' - ' + postData[box]);
+
+    let row;
+
+    con.query(`SELECT * FROM customers WHERE unique_id = ${postData[box]}`)
+      .then( rows => {
+        row = JSON.stringify(rows[0]);
+        row = JSON.parse(row);
+      })
+      .then( () => {
+        console.log('Row Data: ' + row);
+        console.log(typeof row);
+        console.log(row.birthdate)
+        var setDoc = db.collection('customers').doc(String(postData[box])).set(row);
+      })
+      .then(() => {
+        return con.query(`UPDATE customers SET pushed_to_firebase = 'Y' WHERE unique_id = ${postData[box]}`);
+      });
   });
-  
-  res.render('upload', { title: 'Upload a CSV' });
+
+  res.render('index', {title: 'Data Pushed', success: true});
 });
 
 module.exports = router;
