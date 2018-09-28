@@ -5,15 +5,6 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var bodyParser = require('body-parser');
 
-var mysql = require('mysql');
-
-var con = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "root",
-  database: "firebase_app_sql"
-});
-
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 

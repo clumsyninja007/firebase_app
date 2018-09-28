@@ -113,4 +113,16 @@ router.post('/upload-success', function(req, res, next) {
   req.pipe(busboy);
 });
 
+// File upload page
+router.get('/upload', function(req, res, next) {
+  var con = new Database({
+    host: "localhost",
+    user: "root",
+    password: "Le0dav!s",
+    database: "firebase_app_sql"
+  });
+  
+  res.render('upload', { title: 'Upload a CSV' });
+});
+
 module.exports = router;
