@@ -27,7 +27,7 @@ var db = admin.firestore();
 db.settings({ timestampsInSnapshots: true });
 
 // Firestore listener
-var query = db.collection('customers');
+/*var query = db.collection('customers');
 
 var observer = query.onSnapshot(querySnapshot => {
   console.log(`Received query snapshot of size ${querySnapshot.size}`);
@@ -37,7 +37,40 @@ var observer = query.onSnapshot(querySnapshot => {
   });
 }, err => {
   console.log(`Encountered error: ${err}`);
-});
+});*/
+
+db.collection("customers")
+  .onSnapshot(function(snapshot) {
+    snapshot.docChanges.forEach(function(change) {
+      if (change.type === "added") {
+        console.log("New customer: ", change.doc.data());
+      }
+      if (change.type === "modified") {
+        console.log("Modified customer: ", change.doc.data());
+      
+        var con = new Database();
+        con.query(`UPDATE customers \
+                    SET batch_num = ${change.doc.data().batch_num}
+                      ,date_userID_created = '${(change.doc.data().date_userID_created).split('T')[0]}'
+                      ,snn = ${change.doc.data().snn}
+                      ,gender = '${change.doc.data().gender}'
+                      ,first_name = '${change.doc.data().first_name}'
+                      ,last_name = '${change.doc.data().last_name}'
+                      ,lic_num = '${change.doc.data().lic_num}'
+                      ,birthdate = '${(change.doc.data().birthdate).split('T')[0]}'
+                      ,points_strike = ${change.doc.data().points_strike}
+                      ,dl_class = '${change.doc.data().dl_class}'
+                    WHERE unique_id = ${change.doc.data().unique_id}`)
+          .then(() => {
+            return con.close();
+          });
+      }
+      if (change.type === "removed") {
+        console.log("Removed customer: ", change.doc.data());
+      }
+    });
+  });
+
 // end firestore listener
 
 class Database {
@@ -114,15 +147,22 @@ router.post('/upload-success', function(req, res, next) {
     console.log('Final CSV Data: ' + CSVData);
 
     CSVData.forEach(data => {
-      con.query(`INSERT INTO customers (batch_num, date_userID_created, snn, \
-        gender, first_name, last_name, lic_num, birthdate, \
-        points_strike, dl_class) VALUES (${data[0]}, '${data[1]}', '${data[2]}', \
-        '${data[3]}', '${data[4]}', '${data[5]}', '${data[6]}', \
-        '${data[7]}', '${data[8]}', '${data[9]}')`);
-      console.log('1 row inserted');
+      console.log(data.length);
+      if (!isNaN(data[0]) && !isNaN(data[2]) && !isNaN(data[8]) && data.length === 10) {
+        con.query(`INSERT INTO customers (batch_num, date_userID_created, snn, \
+          gender, first_name, last_name, lic_num, birthdate, \
+          points_strike, dl_class) VALUES (${mysql.escape(data[0])}, ${mysql.escape(data[1])}, ${mysql.escape(data[2])}, \
+          ${mysql.escape(data[3])}, ${mysql.escape(data[4])}, ${mysql.escape(data[5])}, ${mysql.escape(data[6])}, \
+          ${mysql.escape(data[7])}, ${mysql.escape(data[8])}, ${mysql.escape(data[9])})`);
+        console.log('1 row inserted');
+      }
+      else {
+        console.log('CSV row invalid');
+      }
     });
 
-    res.render('upload-success', { title: 'CSV Uploaded!', results: CSVData });
+  res.render('upload-success', { title: 'CSV Uploaded!', results: CSVData });
+
   });
   req.pipe(busboy);
 });
@@ -144,6 +184,7 @@ router.get('/push', function(req, res, next) {
     });
 });
 
+// push the selected records to the firestore
 router.post('/push-firebase', function(req, res, next) {
   var con = new Database();
 
@@ -174,6 +215,22 @@ router.post('/push-firebase', function(req, res, next) {
   });
 
   res.render('index', {title: 'Data Pushed', success: true});
+});
+
+// view SQL data for rows which have been pushed to firestore
+router.get('/pushed', function(req, res, next) {
+  var con = new Database();
+
+  let queryResults;
+
+  con.query("SELECT * FROM customers WHERE pushed_to_firebase = 'Y'")
+    .then( rows => {
+      queryResults = rows;
+    })
+    .then( () => {
+      con.close();
+      res.render('pushed', {title: 'SQL Data that has been pushed', results: queryResults});
+    });
 });
 
 module.exports = router;

@@ -1,0 +1,29 @@
+extends layout
+
+block content
+  table#csv-results.table
+    thead
+      tr
+        td batch_num
+        td date_userID_created
+        td snn
+        td gender
+        td first_name
+        td last_name
+        td lic_num
+        td birthdate
+        td points_strike
+        td dl_class
+    tbody
+      for result in results
+        tr.odd(role='row')
+          td #{result.batch_num}
+          td #{result.date_userID_created}
+          td #{result.snn}
+          td #{result.gender}
+          td #{result.first_name}
+          td #{result.last_name}
+          td #{result.lic_number}
+          td #{result.birthdate}
+          td #{result.points_strike}
+          td #{result.dl_class}
