@@ -11,3 +11,11 @@ a {
 #csv-results {
   margin-top: -1rem;
 }
+
+label p {
+  color: #009688;
+}
+
+label p:hover {
+  color: rgba(0,0,0,.26);
+}

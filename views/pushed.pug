@@ -1,7 +1,7 @@
 extends layout
 
 block content
-  table#csv-results.table
+  table#csv-results.table.table-responsive
     thead
       tr
         td batch_num
@@ -18,12 +18,12 @@ block content
       for result in results
         tr.odd(role='row')
           td #{result.batch_num}
-          td #{result.date_userID_created}
+          td #{result.date_userID_created.toISOString().split('T')[0]}
           td #{result.snn}
           td #{result.gender}
           td #{result.first_name}
           td #{result.last_name}
           td #{result.lic_number}
-          td #{result.birthdate}
+          td #{result.birthdate.toISOString().split('T')[0]}
           td #{result.points_strike}
           td #{result.dl_class}

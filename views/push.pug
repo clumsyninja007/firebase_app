@@ -11,6 +11,6 @@ block content
               span.checkbox-decorator
                 span.check
                 div.ripple-container
-              | #{option.batch_num}, #{option.date_userID_created}, #{option.snn}, #{option.gender}, #{option.first_name}, #{option.last_name}, #{option.lic_num}, #{option.birthdate}, #{option.points_strike}, #{option.dl_class}
+              p #{option.batch_num}, #{option.date_userID_created.toISOString().split('T')[0]}, #{option.snn}, #{option.gender}, #{option.first_name}, #{option.last_name}, #{option.lic_num}, #{option.birthdate.toISOString().split('T')[0]}, #{option.points_strike}, #{option.dl_class}
         button.btn.btn-primary.btn-raised(type="submit") Submit
           

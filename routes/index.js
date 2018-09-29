@@ -1,22 +1,18 @@
 var express = require('express');
 var router = express.Router();
 
-//var env = process.env.NODE_ENV || 'development';
+// contains connection string info for MySQL
 var config = require('../config');
 
+// for handling CSV info from post data
 var Busboy = require('busboy');
 var util = require('util');
-
 const csv = require('csv-string');
 
 var mysql = require('mysql');
 
-var postResults = [];
-
-
+// firebase setup
 const admin = require('firebase-admin');
-//const functions = require('firebase-functions');
-
 var serviceAccount = require('../fir-app-9ddd7-firebase-adminsdk-1l3th-0895c82b20.json');
 
 admin.initializeApp({
@@ -25,20 +21,26 @@ admin.initializeApp({
 
 var db = admin.firestore();
 db.settings({ timestampsInSnapshots: true });
+// end firebase setup
+
+// function to sort CSV data
+// sorts by date_userID_created
+// then by birthdate
+function sortFunction(a, b) {
+    if (a[1] === b[1]) {
+        if (a[7] === b[7]) {
+          return 0;
+        }
+        else {
+          return (a[7] < b[7]) ? -1 : 1;
+        }
+    }
+    else {
+        return (a[1] < b[1]) ? -1 : 1;
+    }
+}
 
 // Firestore listener
-/*var query = db.collection('customers');
-
-var observer = query.onSnapshot(querySnapshot => {
-  console.log(`Received query snapshot of size ${querySnapshot.size}`);
-  querySnapshot.docs.forEach((doc) => {
-    console.log(doc.id);
-    console.log(doc.updateTime);
-  });
-}, err => {
-  console.log(`Encountered error: ${err}`);
-});*/
-
 db.collection("customers")
   .onSnapshot(function(snapshot) {
     snapshot.docChanges.forEach(function(change) {
@@ -50,17 +52,17 @@ db.collection("customers")
       
         var con = new Database();
         con.query(`UPDATE customers \
-                    SET batch_num = ${change.doc.data().batch_num}
-                      ,date_userID_created = '${(change.doc.data().date_userID_created).split('T')[0]}'
-                      ,snn = ${change.doc.data().snn}
-                      ,gender = '${change.doc.data().gender}'
-                      ,first_name = '${change.doc.data().first_name}'
-                      ,last_name = '${change.doc.data().last_name}'
-                      ,lic_num = '${change.doc.data().lic_num}'
-                      ,birthdate = '${(change.doc.data().birthdate).split('T')[0]}'
-                      ,points_strike = ${change.doc.data().points_strike}
-                      ,dl_class = '${change.doc.data().dl_class}'
-                    WHERE unique_id = ${change.doc.data().unique_id}`)
+                    SET batch_num = ${mysql.escape(change.doc.data().batch_num)}
+                      ,date_userID_created = ${mysql.escape((change.doc.data().date_userID_created).split('T')[0])}
+                      ,snn = ${mysql.escape(change.doc.data().snn)}
+                      ,gender = ${mysql.escape(change.doc.data().gender)}
+                      ,first_name = ${mysql.escape(change.doc.data().first_name)}
+                      ,last_name = ${mysql.escape(change.doc.data().last_name)}
+                      ,lic_num = ${mysql.escape(change.doc.data().lic_num)}
+                      ,birthdate = ${mysql.escape((change.doc.data().birthdate).split('T')[0])}
+                      ,points_strike = ${mysql.escape(change.doc.data().points_strike)}
+                      ,dl_class = ${mysql.escape(change.doc.data().dl_class)}
+                    WHERE unique_id = ${mysql.escape(change.doc.data().unique_id)}`)
           .then(() => {
             return con.close();
           });
@@ -70,7 +72,6 @@ db.collection("customers")
       }
     });
   });
-
 // end firestore listener
 
 class Database {
@@ -144,8 +145,9 @@ router.post('/upload-success', function(req, res, next) {
       CSVData.shift();
       console.log('Removing header row...');
     }
-    console.log('Final CSV Data: ' + CSVData);
 
+    console.log('Final CSV Data: ' + CSVData);
+    console.log(typeof CSVData);
     CSVData.forEach(data => {
       console.log(data.length);
       if (!isNaN(data[0]) && !isNaN(data[2]) && !isNaN(data[8]) && data.length === 10) {
@@ -161,7 +163,7 @@ router.post('/upload-success', function(req, res, next) {
       }
     });
 
-  res.render('upload-success', { title: 'CSV Uploaded!', results: CSVData });
+  res.render('upload-success', { title: 'CSV Uploaded!', results: CSVData.sort(sortFunction) });
 
   });
   req.pipe(busboy);
@@ -173,7 +175,7 @@ router.get('/push', function(req, res, next) {
 
   let options;
 
-  con.query(`SELECT * FROM customers WHERE pushed_to_firebase = 'N'`)
+  con.query(`SELECT * FROM customers WHERE pushed_to_firebase = 'N' ORDER BY date_userID_created, birthdate`)
     .then( rows => {
       options = rows;
       return con.close();
@@ -214,7 +216,7 @@ router.post('/push-firebase', function(req, res, next) {
       });
   });
 
-  res.render('index', {title: 'Data Pushed', success: true});
+  res.render('index', {title: 'Choose an Option', success: true});
 });
 
 // view SQL data for rows which have been pushed to firestore
@@ -223,7 +225,7 @@ router.get('/pushed', function(req, res, next) {
 
   let queryResults;
 
-  con.query("SELECT * FROM customers WHERE pushed_to_firebase = 'Y'")
+  con.query("SELECT * FROM customers WHERE pushed_to_firebase = 'Y' ORDER BY date_userID_created, birthdate")
     .then( rows => {
       queryResults = rows;
     })
