@@ -219,22 +219,29 @@ router.post('/push-firebase', function(req, res, next) {
   Object.keys(postData).forEach(function(box) {
     console.log(box + ' - ' + postData[box]);
 
-    let row;
+    if (/^\d+$/.test(postData[box])) {
+      let row;
 
-    con.query(`SELECT * FROM customers WHERE unique_id = ${postData[box]}`)
-      .then( rows => {
-        row = JSON.stringify(rows[0]);
-        row = JSON.parse(row);
-      })
-      .then( () => {
-        console.log('Row Data: ' + row);
-        console.log(typeof row);
-        console.log(row.birthdate)
-        var setDoc = db.collection('customers').doc(String(postData[box])).set(row);
-      })
-      .then(() => {
-        return con.query(`UPDATE customers SET pushed_to_firebase = 'Y' WHERE unique_id = ${postData[box]}`);
-      });
+      con.query(`SELECT * FROM customers WHERE unique_id = ${mysql.escape(postData[box])}`)
+        .then( rows => {
+          row = JSON.stringify(rows[0]);
+          row = JSON.parse(row);
+          row.birthdate = new Date(row.birthdate);
+          row.date_userID_created = new Date(row.date_userID_created);
+          row.snn = Number(row.snn);
+          row.unique_id = Number(row.unique_id);
+          row.points_strike = Number(row.points_strike);
+        })
+        .then( () => {
+          console.log('Row Data: ' + row);
+          console.log(typeof row);
+          console.log(row.birthdate)
+          var setDoc = db.collection('customers').doc(String(postData[box])).set(row);
+        })
+        .then(() => {
+          return con.query(`UPDATE customers SET pushed_to_firebase = 'Y' WHERE unique_id = ${mysql.escape(postData[box])}`);
+        });
+    }
   });
 
   res.render('index', {title: 'Choose an Option', success: 'pushed'});
