@@ -10,7 +10,11 @@ block content
   tr
     td
       a(href="/pushed") See what's been pushed
-  if success
+  if success === 'pushed'
     tr
       td
         div.alert.alert-success Data pushed!
+  if success === 'invalid-csv'
+    tr
+      td
+        div.alert.alert-danger Invalid CSV

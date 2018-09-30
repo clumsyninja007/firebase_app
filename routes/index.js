@@ -148,23 +148,44 @@ router.post('/upload-success', function(req, res, next) {
 
     console.log('Final CSV Data: ' + CSVData);
     console.log(typeof CSVData);
-    CSVData.forEach(data => {
-      console.log(data.length);
-      if (!isNaN(data[0]) && !isNaN(data[2]) && !isNaN(data[8]) && data.length === 10) {
-        con.query(`INSERT INTO customers (batch_num, date_userID_created, snn, \
-          gender, first_name, last_name, lic_num, birthdate, \
-          points_strike, dl_class) VALUES (${mysql.escape(data[0])}, ${mysql.escape(data[1])}, ${mysql.escape(data[2])}, \
-          ${mysql.escape(data[3])}, ${mysql.escape(data[4])}, ${mysql.escape(data[5])}, ${mysql.escape(data[6])}, \
-          ${mysql.escape(data[7])}, ${mysql.escape(data[8])}, ${mysql.escape(data[9])})`);
-        console.log('1 row inserted');
-      }
-      else {
-        console.log('CSV row invalid');
-      }
-    });
 
-  res.render('upload-success', { title: 'CSV Uploaded!', results: CSVData.sort(sortFunction) });
+    let valid = true;
 
+    // validate CSV data and insert into MySQL if valid
+    con.query("START TRANSACTION")
+      .then( () => {
+        CSVData.forEach(data => {
+          console.log(data.length);
+          console.log(data[1]);
+          if (data.length === 10 && /^\d+$/.test(data[0]) && /^(19|20)\d\d-\d\d-\d\d$/.test(data[1]) && /^\d{9}$/.test(data[2]) && /^m|f$/.test(data[3]) && /^[a-z ,.'-]+$/.test(data[4]) && /^[a-z ,.'-]+$/.test(data[5]) && /^\w+$/.test(data[6]) && /^(19|20)\d\d-\d\d-\d\d$/.test(data[7]) && /^\d+$/.test(data[8]) && /^[a-zA-Z]$/.test(data[9])) {
+            con.query(`INSERT INTO customers (batch_num, date_userID_created, snn, \
+              gender, first_name, last_name, lic_num, birthdate, \
+              points_strike, dl_class) VALUES (${mysql.escape(data[0])}, ${mysql.escape(data[1])}, ${mysql.escape(data[2])}, \
+              ${mysql.escape(data[3])}, ${mysql.escape(data[4])}, ${mysql.escape(data[5])}, ${mysql.escape(data[6])}, \
+              ${mysql.escape(data[7])}, ${mysql.escape(data[8])}, ${mysql.escape(data[9])})`);
+            console.log('1 row inserted');
+          }
+          else {
+            console.log('CSV row invalid');
+            valid = false;
+          }
+        });
+      })
+      .then ( () => {
+        console.log("Value of valid variable: " + valid);
+        if (valid) {
+          console.log("CSV valid. Committing.");
+          con.query("COMMIT");
+          res.render('upload-success', { title: 'CSV Uploaded!', results: CSVData.sort(sortFunction) });
+        }
+        else {
+          console.log("CSV invalid. Rolling back.");
+          con.query("ROLLBACK")
+            .then( () => {
+              res.redirect('/invalid-csv');
+            });
+        }
+      });
   });
   req.pipe(busboy);
 });
@@ -216,7 +237,7 @@ router.post('/push-firebase', function(req, res, next) {
       });
   });
 
-  res.render('index', {title: 'Choose an Option', success: true});
+  res.render('index', {title: 'Choose an Option', success: 'pushed'});
 });
 
 // view SQL data for rows which have been pushed to firestore
@@ -233,6 +254,10 @@ router.get('/pushed', function(req, res, next) {
       con.close();
       res.render('pushed', {title: 'SQL Data that has been pushed', results: queryResults});
     });
+});
+
+router.get('/invalid-csv', function(req, res, next) {
+  res.render('index', {title: 'Choose an Option', success: 'invalid-csv'})
 });
 
 module.exports = router;
